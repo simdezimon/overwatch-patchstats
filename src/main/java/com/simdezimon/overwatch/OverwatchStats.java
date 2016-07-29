@@ -81,12 +81,18 @@ public class OverwatchStats {
 				return context.serialize(src.getStats());
 			}
 		})
-
 		.create();
 
-		if (new File("stats/index.json").exists()) {
+		
+
+		if (new File("stats/lists.json").exists()) {
 			String listsString = FileUtils.readFileToString(new File("stats/lists.json"), Charset.defaultCharset());
 			lists = gson.fromJson(listsString, PlayerIdLists.class);
+		} else {
+			lists = new PlayerIdLists();
+		}
+		
+		if (new File("stats/index.json").exists()) {
 			readIndex();
 		} else {
 			index = new PlayerIndex();

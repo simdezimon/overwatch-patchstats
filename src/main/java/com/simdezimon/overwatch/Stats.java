@@ -59,7 +59,7 @@ public class Stats {
 		public String getStat() {
 			return stat;
 		}
-			
+
 		@Override
 		public int hashCode() {
 			final int prime = 31;
@@ -96,85 +96,104 @@ public class Stats {
 	}
 
 	public class Summary {
-		
-		@SerializedName("Patches") private Map<Integer,String> patches = new HashMap<>();
-		
-		@SerializedName("Heroes") private Map<String, Map<String, Map<Integer,Double>>> heroes  = LazyMap.lazyMap(new TreeMap<>(), () -> LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>()));
-		@SerializedName("Stats") private Map<String, Map<String, Map<Integer,Double>>> stats= LazyMap.lazyMap(new TreeMap<>(), () -> LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>()));
-		@SerializedName("Games Played") private Map<String,	 Map<Integer,Double>> gamesPlayed =  LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>());
-		
-		@SerializedName("Heroes, Confidence Interval") private Map<String, Map<String, Map<Integer,String>>> heroesExtra  = LazyMap.lazyMap(new TreeMap<>(), () -> LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>()));
-		@SerializedName("Stats, Confidence Interval") private Map<String, Map<String, Map<Integer,String>>> statsExtra  = LazyMap.lazyMap(new TreeMap<>(), () -> LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>()));
-		@SerializedName("Games Played, Confidence Interval") private Map<String,  Map<Integer,String>> gamesPlayedExtra =  LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>());
-		
-		
+
+		@SerializedName("Patches")
+		private Map<Integer, String> patches = new HashMap<>();
+
+		@SerializedName("Heroes")
+		private Map<String, Map<String, Map<Integer, Double>>> heroes = LazyMap.lazyMap(new TreeMap<>(),
+				() -> LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>()));
+		@SerializedName("Stats")
+		private Map<String, Map<String, Map<Integer, Double>>> stats = LazyMap.lazyMap(new TreeMap<>(),
+				() -> LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>()));
+		@SerializedName("Games Played")
+		private Map<String, Map<Integer, Double>> gamesPlayed = LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>());
+
+		@SerializedName("Heroes, Confidence Interval")
+		private Map<String, Map<String, Map<Integer, String>>> heroesExtra = LazyMap.lazyMap(new TreeMap<>(),
+				() -> LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>()));
+		@SerializedName("Stats, Confidence Interval")
+		private Map<String, Map<String, Map<Integer, String>>> statsExtra = LazyMap.lazyMap(new TreeMap<>(),
+				() -> LazyMap.lazyMap(new TreeMap<>(), () -> new TreeMap<>()));
+		@SerializedName("Games Played, Confidence Interval")
+		private Map<String, Map<Integer, String>> gamesPlayedExtra = LazyMap.lazyMap(new TreeMap<>(),
+				() -> new TreeMap<>());
+
 		public Summary() {
 			Instant before = Instant.parse("2016-06-28T00:00:00Z");
-	    	DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(Locale.UK).withZone(ZoneId.systemDefault());
-	    	int i = 0;
-	    	for(Instant patch : Player.patches){
-	    		patches.put(i++,formatter.format(before) + " - " + formatter.format(patch));
-	    		before = patch;
-	    	}
-			
+			DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(Locale.UK)
+					.withZone(ZoneId.systemDefault());
+			int i = 0;
+			for (Instant patch : Player.patches) {
+				patches.put(i++, formatter.format(before) + " - " + formatter.format(patch));
+				before = patch;
+			}
+
 		}
-		
-		public void addGames(String hero,int patch,double d){
-			gamesPlayed.get(hero).put(patch,d);
+
+		public void addGames(String hero, int patch, double d) {
+			gamesPlayed.get(hero).put(patch, d);
 		}
-		
-		public void calcGames(){
-			for(int i = 0;i<Player.patches.size();i++){
+
+		public void calcGames() {
+			for (int i = 0; i < Player.patches.size(); i++) {
 				int sum = 0;
-				for(java.util.Map.Entry<String, Map<Integer, Double>> entry : gamesPlayed.entrySet()){
-					if(!entry.getKey().equals("ALL HEROES")){
+				for (java.util.Map.Entry<String, Map<Integer, Double>> entry : gamesPlayed.entrySet()) {
+					if (!entry.getKey().equals("ALL HEROES")) {
 						sum += entry.getValue().get(i);
 					}
 				}
-				for(java.util.Map.Entry<String, Map<Integer, Double>> entry : gamesPlayed.entrySet()){
-					int value = (int) (double)entry.getValue().get(i);
+				for (java.util.Map.Entry<String, Map<Integer, Double>> entry : gamesPlayed.entrySet()) {
+					int value = (int) (double) entry.getValue().get(i);
 
-					if(!entry.getKey().equals("ALL HEROES")){
-						ConfidenceInterval interval = IntervalUtils.getClopperPearsonInterval(sum,value, 0.9);
-						gamesPlayedExtra.get(entry.getKey()).put(i, String.format("%7d, %5.2f%% (%5.2f%% - %5.2f%%), in %4.1f%% of all teams", value,value/(double)sum * 100.,interval.getLowerBound() * 100.,interval.getUpperBound() * 100.,value/(double)sum * 600.));
+					if (!entry.getKey().equals("ALL HEROES")) {
+						ConfidenceInterval interval = getIntervall(sum, value, 0.9);
+						gamesPlayedExtra.get(entry.getKey()).put(i,
+								String.format("%7d, %5.2f%% (%5.2f%% - %5.2f%%), in %4.1f%% of all teams", value,
+										value / (double) sum * 100., interval.getLowerBound() * 100.,
+										interval.getUpperBound() * 100., value / (double) sum * 600.));
 					}
-					}
+				}
 			}
 		}
-		
-		public void addStat(String hero,String stat,int patch, double value){
-			if(stat.equals("Games Won") || stat.equals("Win Percentage")) {
-				double fac =  0.5 / Stats.this.getStat("ALL HEROES", patch, "Games Won");
+
+		public ConfidenceInterval getIntervall(int numberOfTrials, int numberOfSuccesses, double confidenceLevel) {
+			try {
+				return IntervalUtils.getClopperPearsonInterval(numberOfTrials, numberOfSuccesses, 0.9);
+			} catch (Exception e) {
+				return new ConfidenceInterval(0, 1, confidenceLevel);
+			}
+
+		}
+
+		public void addStat(String hero, String stat, int patch, double value) {
+			if(!Double.isFinite(value)){
+				return;
+			}
+			if (stat.equals("Games Won") || stat.equals("Win Percentage")) {
+				double fac = 0.5 / Stats.this.getStat("ALL HEROES", patch, "Games Won");
 				int number = (int) Math.round(gamesPlayed.get(hero).get(patch) * fac);
 				int success = (int) Math.round(number * value * fac);
-				ConfidenceInterval interval = IntervalUtils.getClopperPearsonInterval(number,success, 0.9);
-				String str = String.format("%5.2f%% (%5.2f%% - %5.2f%%)", value * fac * 100.,interval.getLowerBound() * 100.,interval.getUpperBound() * 100.);
-				heroesExtra.get(hero).get(stat).put(patch,str);
-				statsExtra.get(stat).get(hero).put(patch,str);
+				ConfidenceInterval interval = getIntervall(number, success, 0.9);
+				String str = String.format("%5.2f%% (%5.2f%% - %5.2f%%)", value * fac * 100.,
+						interval.getLowerBound() * 100., interval.getUpperBound() * 100.);
+				heroesExtra.get(hero).get(stat).put(patch, str);
+				statsExtra.get(stat).get(hero).put(patch, str);
 			} else {
-				int number = (int) Math.round(gamesPlayed.get(hero).get(patch))/2;
-				ConfidenceInterval interval = IntervalUtils.getNormalApproximationInterval(number*2,number, 0.9);
-				String str = String.format("%.2f (%.2f - %.2f)", value , (0.5+interval.getLowerBound() ) * value,(0.5+interval.getUpperBound())* value );
-				heroesExtra.get(hero).get(stat).put(patch,str);
-				statsExtra.get(stat).get(hero).put(patch,str);
+				int number = (int) Math.round(gamesPlayed.get(hero).get(patch)) / 2;
+				ConfidenceInterval interval = getIntervall(number * 2, number, 0.9);
+				String str = String.format("%.2f (%.2f - %.2f)", value, (0.5 + interval.getLowerBound()) * value,
+						(0.5 + interval.getUpperBound()) * value);
+				heroesExtra.get(hero).get(stat).put(patch, str);
+				statsExtra.get(stat).get(hero).put(patch, str);
 			}
-			
-			heroes.get(hero).get(stat).put(patch,value);
-			stats.get(stat).get(hero).put(patch,value);
+
+			heroes.get(hero).get(stat).put(patch, value);
+			stats.get(stat).get(hero).put(patch, value);
 		}
 	}
 
 	public void saveSummary() throws IOException {
-		// patch - hero - stats
-//		Map<String, Map<String, HeroStats>> summary = new HashMap<>();
-//		for (int i = 0; i < Player.patches.size(); i++) {
-//			Map<String, HeroStats> patchMap = new HashMap<>();
-//			summary.put(i+"",  patchMap);
-//			
-//			for (String hero : heroes) {
-//				patchMap.put(hero, new HeroStats(getSum(hero, i+"", "Games Played")));
-//			}
-//		}
 		Summary summary = new Summary();
 
 		for (int i = 0; i < Player.patches.size(); i++) {
@@ -183,27 +202,24 @@ public class Stats {
 			}
 		}
 		summary.calcGames();
-		
-		for(StatisticKey k : stats.keySet()){
-			if(occurences.get(k) .d > 100){
-				summary.addStat(k.hero, k.stat,k.patch, getStat(k.hero, k.patch, k.stat));
-			} else {
-				System.out.println(k.hero+" "+k.stat+" "+occurences.get(k).d);
-			}
+
+		for (StatisticKey k : stats.keySet()) {
+			summary.addStat(k.hero, k.stat, k.patch, getStat(k.hero, k.patch, k.stat));
 		}
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		String str = gson.toJson(summary);
-		FileUtils.writeStringToFile(new File("stats/summary.json"),str, Charset.defaultCharset());
+		FileUtils.writeStringToFile(new File("stats/summary.json"), str, Charset.defaultCharset());
 	}
 
 	private static final String[] heroes = new String[] { "ALL HEROES", "Torbjörn", "Widowmaker", "Bastion", "Reaper",
 			"Tracer", "Symmetra", "Junkrat", "D.Va", "Hanzo", "Roadhog", "Mei", "Zarya", "Winston", "Ana", "Genji",
 			"Lúcio", "Pharah", "Mercy", "Reinhardt", "Soldier: 76", "Zenyatta", "McCree" };
 
-	private Map<StatisticKey, StatisticValue> stats = LazyMap.lazyMap(new LinkedHashMap<>(), () -> new StatisticValue());
-	private Map<StatisticKey, StatisticValue> occurences = LazyMap.lazyMap(new LinkedHashMap<>(), () -> new StatisticValue());
+	private Map<StatisticKey, StatisticValue> stats = LazyMap.lazyMap(new LinkedHashMap<>(),
+			() -> new StatisticValue());
+	private Map<StatisticKey, StatisticValue> occurences = LazyMap.lazyMap(new LinkedHashMap<>(),
+			() -> new StatisticValue());
 
-	
 	private void addStat(String hero, int patch, String stat, double value) {
 		stats.get(new StatisticKey(hero, patch, stat)).add(value);
 		occurences.get(new StatisticKey(hero, patch, stat)).add(1);
@@ -220,19 +236,21 @@ public class Stats {
 	}
 
 	private boolean isProportion(String key) {
-		return key.contains("Average") || key.contains("Accuracy") || key.contains("Percentage")|| key.contains("Percentage")|| key.contains("Rank");
+		return key.contains("Average") || key.contains("Accuracy") || key.contains("Percentage")
+				|| key.contains("Percentage") || key.contains("Rank");
 	}
 
 	private boolean isUseful(String key) {
 		return !key.contains("Most in") && !key.contains("Best") && !key.contains("per Life");
 	}
-	
+
 	private String normalize(String s) {
-		if(s.endsWith("Kill") || s.endsWith("Hit")|| s.endsWith("Elimination")|| s.endsWith("kill")|| s.endsWith("Assist")|| s.endsWith("Death")|| s.endsWith("Card")){
-			return s +"s";
+		if (s.endsWith("Kill") || s.endsWith("Hit") || s.endsWith("Elimination") || s.endsWith("kill")
+				|| s.endsWith("Assist") || s.endsWith("Death") || s.endsWith("Card")) {
+			return s + "s";
 		}
 		return s;
-		
+
 	}
 
 	public void process(Player p) {
@@ -271,11 +289,11 @@ public class Stats {
 							statValue = value - prev;
 						}
 						previous.put(key, value);
-						addStat(hero, i , key, statValue);
+						addStat(hero, i, key, statValue);
 					}
 				}
-				if(!hero.equals("ALL HEROES")) {
-					addStat("ALL HEROES", i , "Rank", matches[i].getData().getRank() * (current - prevGames));
+				if (!hero.equals("ALL HEROES")) {
+					addStat("ALL HEROES", i, "Rank", matches[i].getData().getRank() * (current - prevGames));
 				}
 				prevGames = current;
 			}
